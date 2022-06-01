@@ -89,6 +89,11 @@ def objective(trial: optuna.Trial,
     # Calculando DBCV
     score = validity_index(reduced_embeddings.astype(np.float64), cluster_labels)
 
+    # Computando número de clusters 
+    n_clusters = len(np.unique(cluster_labels))
+    trial.set_user_attr("n_clusters", n_clusters)
+    print(f"- {n_clusters - 1} clusters obtained.")
+
     return score
 
 if __name__ == "__main__":
@@ -128,8 +133,11 @@ if __name__ == "__main__":
     print(f"\nBest DBCV: {study.best_value}")
     print(f"Best params: {study.best_params}")
 
-    # Serializar trials para um csv
+    # Serializar trials para um csv, contendo o número de clusters obtidos.
     df = study.trials_dataframe()
+    n_clusters = [trial.user_attrs["n_clusters"] for trial in study.trials]
+    df["n_clusters"] = n_clusters
+
     df.sort_values(by='value', ascending=False, inplace=True)
     print(df.head(5))
 
