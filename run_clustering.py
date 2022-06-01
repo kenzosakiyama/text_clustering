@@ -7,8 +7,8 @@ import pickle
 import pandas as pd
 
 np.random.seed(1234)
-umap_params = {"n_components": 110, "n_neighbors": 50, 'min_dist': 0.0, 'metric': 'cosine', "transform_seed":1234, 'random_state': 1234, "low_memory":True}
-hdbscan_params = {"min_cluster_size": 65, "min_samples": 55, 'metric': 'euclidean', 'cluster_selection_method': 'eom'}
+umap_params = {"n_components": 185, "n_neighbors": 70, 'min_dist': 0.0, 'metric': 'cosine', "transform_seed":1234, 'random_state': 1234}
+hdbscan_params = {"min_cluster_size": 65, "min_samples": 100, 'metric': 'euclidean', 'cluster_selection_method': 'eom'}
 
 if __name__ == "__main__":
 

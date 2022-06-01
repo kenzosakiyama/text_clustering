@@ -7,11 +7,12 @@ import numpy as np
 import pickle
 from functools import partial
 import pandas as pd
+from typing import Iterable, Tuple
 
 SEED = 1234
 N_CORES = 6
 
-# TODO: transformar isto num json.
+# TODO: transformar isto num json?
 # Range values for calibration
 # (UMAP)
 MIN_NEIGHBORS = 10
@@ -25,17 +26,16 @@ MIN_CLUSTER_SIZE = 10
 MAX_CLUSTER_SIZE = 100
 STEP_CLUSTER = 5
 MIN_SAMPLES = 5
-MAX_SAMPLES = 100
+MAX_SAMPLES = 200
 STEP_SAMPLES = 5
 
 np.random.seed(SEED)
 
-def objective(trial: optuna.Trial, 
-              text_vectors: np.array) -> float:
-
-    # Preparando UMAP
-    n_neighbors = trial.suggest_int("umap_n_neighbors", MIN_NEIGHBORS, MAX_NEIGHBORS, STEP_NEIGHB)
-    n_components = trial.suggest_int("umap_n_components", MIN_COMPONENTS, MAX_COMPONENTS, STEP_COMPONENTS)
+def run_clustering(text_vectors: np.array,
+                   n_neighbors: int, 
+                   n_components: int, 
+                   min_cluster_size: int, 
+                   min_samples: int) -> Tuple[Iterable[int], np.array]:
 
     umap_reducer = UMAP(
         n_neighbors=n_neighbors, 
@@ -47,10 +47,6 @@ def objective(trial: optuna.Trial,
         transform_seed=SEED,
         n_jobs=N_CORES
     )
-
-    # Preparando HDBSCAN
-    min_cluster_size = trial.suggest_int("hdbscan_min_cluster_size", MIN_CLUSTER_SIZE, MAX_CLUSTER_SIZE, STEP_CLUSTER)
-    min_samples = trial.suggest_int("hdbscan_min_samples", MIN_SAMPLES, MAX_SAMPLES, STEP_SAMPLES)
 
     hdbscan_clustering = HDBSCAN(
         min_cluster_size=min_cluster_size if type(min_cluster_size) == int else min_cluster_size.item(),
@@ -68,7 +64,29 @@ def objective(trial: optuna.Trial,
     print(f"- Running HDBSCAN: {hdbscan_clustering}.")
     cluster_labels = hdbscan_clustering.fit_predict(reduced_embeddings)
 
-    # Calculando a validação do HDBSCAN
+    # Retorna os rótulos dos clusters e as embeddings UMAP geradas
+    return cluster_labels, reduced_embeddings
+
+def objective(trial: optuna.Trial, 
+              text_vectors: np.array) -> float:
+
+    # Preparando UMAP
+    n_neighbors = trial.suggest_int("umap_n_neighbors", MIN_NEIGHBORS, MAX_NEIGHBORS, STEP_NEIGHB)
+    n_components = trial.suggest_int("umap_n_components", MIN_COMPONENTS, MAX_COMPONENTS, STEP_COMPONENTS)
+
+    # Preparando HDBSCAN
+    min_cluster_size = trial.suggest_int("hdbscan_min_cluster_size", MIN_CLUSTER_SIZE, MAX_CLUSTER_SIZE, STEP_CLUSTER)
+    min_samples = trial.suggest_int("hdbscan_min_samples", MIN_SAMPLES, MAX_SAMPLES, STEP_SAMPLES)
+
+    cluster_labels, reduced_embeddings = run_clustering(
+        text_vectors, 
+        n_neighbors, 
+        n_components, 
+        min_cluster_size, 
+        min_samples
+    )
+
+    # Calculando DBCV
     score = validity_index(reduced_embeddings.astype(np.float64), cluster_labels)
 
     return score
@@ -118,32 +136,18 @@ if __name__ == "__main__":
     df.to_csv(args.output_file)
 
     print("- Clustering with the best parameters.")
-    umap_reducer = UMAP(
-        n_neighbors=study.best_params["umap_n_neighbors"],
-        n_components=study.best_params["umap_n_components"],
-        min_dist=0.0,
-        metric='cosine',
-        low_memory=True,
-        random_state=SEED,
-        transform_seed=SEED,
-        n_jobs=N_CORES
+    cluster_labels, reduced_embeddings = run_clustering(
+        text_vectors,
+        study.best_params["umap_n_neighbors"],
+        study.best_params["umap_n_components"],
+        study.best_params["hdbscan_min_cluster_size"],
+        study.best_params["hdbscan_min_samples"]
     )
-    
-    clustering_model = HDBSCAN(
-        min_cluster_size=study.best_params["hdbscan_min_cluster_size"],
-        min_samples=study.best_params["hdbscan_min_samples"],
-        metric='euclidean',
-        cluster_selection_method='eom',
-        core_dist_n_jobs=N_CORES,
-    )
-
-    reduced_embeddings = umap_reducer.fit_transform(text_vectors)
-    cluster_labels = clustering_model.fit_predict(reduced_embeddings)
 
     final_dbcv = validity_index(reduced_embeddings.astype(np.float64), cluster_labels)
 
     print(f"Final DBCV: {final_dbcv}")
 
-    print(f"- Saving clusters to: {args.output_file}.")
-    with open(args.output_file, "wb") as f:
+    print(f"- Saving clusters to: {args.cluster_file}.")
+    with open(args.cluster_file, "wb") as f:
         pickle.dump(cluster_labels, f)
