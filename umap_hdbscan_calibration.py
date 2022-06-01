@@ -82,13 +82,14 @@ if __name__ == "__main__":
 
     parser.add_argument("--n_jobs", type=int, default=1, help="Número cores a utilizar.")
     parser.add_argument("--iterations", type=int, default=100, help="Número de iterações para o Random Search.")
+    parser.add_argument("--cluster_file", type=str, default="cluster.pkl", help="Arquivo .pkl contendo os cluster para os melhores parâmetros.")
 
     args = parser.parse_args()
 
     with open(args.embeddings_file, "rb") as f:
         text_vectors = pickle.load(f)
 
-    print(f"- Loaded vectors of shape: {text_vectors.shape}.")
+    print(f"- Loaded vectors of shape: {text_vectors.shape}, from {args.embeddings_file}.")
     print(f"- Saving parameters to: {args.output_file}.")
 
     # Mostrando ranges
@@ -115,3 +116,34 @@ if __name__ == "__main__":
     print(df.head(5))
 
     df.to_csv(args.output_file)
+
+    print("- Clustering with the best parameters.")
+    umap_reducer = UMAP(
+        n_neighbors=study.best_params["umap_n_neighbors"],
+        n_components=study.best_params["umap_n_components"],
+        min_dist=0.0,
+        metric='cosine',
+        low_memory=True,
+        random_state=SEED,
+        transform_seed=SEED,
+        n_jobs=N_CORES
+    )
+    
+    clustering_model = HDBSCAN(
+        min_cluster_size=study.best_params["hdbscan_min_cluster_size"],
+        min_samples=study.best_params["hdbscan_min_samples"],
+        metric='euclidean',
+        cluster_selection_method='eom',
+        core_dist_n_jobs=N_CORES,
+    )
+
+    reduced_embeddings = umap_reducer.fit_transform(text_vectors)
+    cluster_labels = clustering_model.fit_predict(reduced_embeddings)
+
+    final_dbcv = validity_index(reduced_embeddings.astype(np.float64), cluster_labels)
+
+    print(f"Final DBCV: {final_dbcv}")
+
+    print(f"- Saving clusters to: {args.output_file}.")
+    with open(args.output_file, "wb") as f:
+        pickle.dump(cluster_labels, f)

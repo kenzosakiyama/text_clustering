@@ -6,8 +6,9 @@ import numpy as np
 import pickle
 import pandas as pd
 
-umap_params = {"n_components": 160, "n_neighbors": 30, 'min_dist': 0.0, 'metric': 'cosine', 'random_state': 1234, "transform_seed": 1234}
-hdbscan_params = {"min_cluster_size": 70, "min_samples": 70, 'metric': 'euclidean', 'cluster_selection_method': 'eom'}
+np.random.seed(1234)
+umap_params = {"n_components": 110, "n_neighbors": 50, 'min_dist': 0.0, 'metric': 'cosine', "transform_seed":1234, 'random_state': 1234, "low_memory":True}
+hdbscan_params = {"min_cluster_size": 65, "min_samples": 55, 'metric': 'euclidean', 'cluster_selection_method': 'eom'}
 
 if __name__ == "__main__":
 
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     assert len(df) == text_vectors.shape[0], "O número de embeddings não corresponde ao número de linhas do arquivo de saída."
 
     print(f"- Loaded texts: {len(df)}.")
-    print(f"- Loaded vectors of shape: {text_vectors.shape}.")
+    print(f"- Loaded vectors of shape: {text_vectors.shape}, from {args.embeddings_file}.")
     print(f"- Saving clusters to: {args.output_file}.")
 
     umap_reducer = UMAP(**umap_params)
