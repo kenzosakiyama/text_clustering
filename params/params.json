@@ -1,7 +1,7 @@
 {
     "umap": {
-        "n_components": 130, 
-        "n_neighbors": 20,
+        "n_components": 190, 
+        "n_neighbors": 40,
         "min_dist": 0.0, 
         "metric": "cosine", 
         "transform_seed":1234, 
@@ -10,8 +10,8 @@
         
     },
     "hdbscan": {
-        "min_cluster_size": 10, 
-        "min_samples": 110, 
+        "min_cluster_size": 55, 
+        "min_samples": 75, 
         "metric": "euclidean", 
         "cluster_selection_method": "eom",
         "core_dist_n_jobs": 6

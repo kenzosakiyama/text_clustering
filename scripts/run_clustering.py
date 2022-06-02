@@ -19,6 +19,49 @@ def load_parameters_from_json(json_file_path: str) -> Tuple[Dict, Dict]:
 
     return umap_params, hdbscan_params
 
+def show_clusters(clusters: np.array) -> None:
+
+    unique, counts = np.unique(clusters, return_counts=True)
+    sorted_idxs = np.argsort(counts)[::-1]
+    print(f"- {len(unique) - 1} identified clusters.")
+    for i in sorted_idxs:
+        print(f"\t- {unique[i]:2d}: {counts[i]}")
+
+def split_largest_cluster(clusters: np.array,
+                          umap_embeddings: np.array,
+                          clustering_model: HDBSCAN,
+                          n_times: int) -> np.array:
+    
+    clusters = clusters.copy()
+
+    for _ in range(n_times):
+
+        unique, counts = np.unique(clusters, return_counts=True)
+        n_clusters = len(unique)
+        largest_cluster = unique[np.argsort(counts)[::-1][0]]
+
+        # If the largest cluster is the outlier cluster, stop the process.
+        if largest_cluster == -1:
+            print(f" Unable to split the largest cluster. It corresponds to the outlier cluster (-1).")
+            break
+
+        # Filtering examples from the largest cluster
+        cluster_mask = clusters == largest_cluster
+        cluster_embeddings = umap_embeddings[cluster_mask]
+        new_clusters = clustering_model.fit_predict(cluster_embeddings)
+
+        # Showing split result.
+        print(f"- After splitting the largest cluster ({largest_cluster}), {len(np.unique(new_clusters))} clusters were created:")
+        show_clusters(new_clusters)
+        split_dbcv = validity_index(cluster_embeddings, new_clusters.astype(""))
+        print(f"- DBCV for the splitted clusters: {split_dbcv}")
+
+        # Fixing cluster ids. Keeping outlier id (-1).
+        new_clusters[new_clusters > 0] += n_clusters
+        clusters[cluster_mask] = new_clusters
+
+    return clusters
+
 if __name__ == "__main__":
 
     parser = ArgumentParser()
@@ -26,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--params", type=str, required=False, help="Arquivo .json com os parametros de configuração do UMAP e HDBSCAN.")
     parser.add_argument("--embeddings", type=str, required=True, help="Arquivo .pkl com os embeddings a serem utilizados.")
     parser.add_argument("--output_file", type=str, default="clusters.pkl", help="Arquivo .pkl para armazenar os clusters. Associa-se um cluster para cada exemplo do arquivo de embeddings.")
+    parser.add_argument("--divide_largest_cluster", type=int, default=0, help="Isola-se o maior cluster e repete-se a clusterização divide_largest_cluster vezes.")
 
     args = parser.parse_args()
 
@@ -33,7 +77,7 @@ if __name__ == "__main__":
         text_vectors = pickle.load(f)
 
     print(f"- Loaded vectors of shape: {text_vectors.shape}, from {args.embeddings}.")
-    print(f"- LOading parameters from {args.params}.")
+    print(f"- Using parameters from {args.params}.")
     print(f"- Saving clusters to: {args.output_file}.")
 
     umap_params, hdbscan_params = load_parameters_from_json(args.params)
@@ -49,15 +93,24 @@ if __name__ == "__main__":
     DBCV = validity_index(reduced_embeddings.astype(np.float64), cluster_labels)
     print(f"- DBCV: {DBCV}.")
 
-    unique, counts = np.unique(cluster_labels, return_counts=True)
-    sorted_idxs = np.argsort(counts)[::-1]
-    print(f"- {len(unique) - 1} identified clusters.")
-    for i in sorted_idxs:
-        print(f"\t- {unique[i]:2d}: {counts[i]}")
+    show_clusters(cluster_labels)
+
+    if args.divide_largest_cluster > 0:
+        print(f"- Splitting the largest cluster. Repeating process {args.divide_largest_cluster} times.")
+        cluster_labels = split_largest_cluster(
+            cluster_labels,
+            reduced_embeddings,
+            hdbscan_clustering,
+            args.divide_largest_cluster
+        )
+        print(f"Final clusters:")
+        show_clusters(cluster_labels)
+        new_DBCV = validity_index(reduced_embeddings.astype(np.float64), cluster_labels)
+        print(f"- DBCV, considering the new clusters: {new_DBCV}.")
 
     print(f"- Saving clusters to: {args.output_file}.")
     with open(args.output_file, "wb") as f:
         pickle.dump(cluster_labels, f)
 
-    # df.to_csv(args.output_file)
+    
 
