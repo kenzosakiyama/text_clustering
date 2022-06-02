@@ -133,10 +133,8 @@ if __name__ == "__main__":
     print(f"\nBest DBCV: {study.best_value}")
     print(f"Best params: {study.best_params}")
 
-    # Serializar trials para um csv, contendo o número de clusters obtidos.
+    # Serializar trials para um csv
     df = study.trials_dataframe()
-    n_clusters = [trial.user_attrs["n_clusters"] for trial in study.trials]
-    df["n_clusters"] = n_clusters
 
     df.sort_values(by='value', ascending=False, inplace=True)
     print(df.head(5))

@@ -8,8 +8,6 @@ import pickle
 import json
 
 np.random.seed(1234)
-umap_params = {"n_components": 110, "n_neighbors": 50, 'min_dist': 0.0, 'metric': 'cosine', "transform_seed":1234, 'random_state': 1234, "low_memory":True}
-hdbscan_params = {"min_cluster_size": 65, "min_samples": 55, 'metric': 'euclidean', 'cluster_selection_method': 'eom'}
 
 def load_parameters_from_json(json_file_path: str) -> Tuple[Dict, Dict]:
     
