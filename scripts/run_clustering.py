@@ -53,7 +53,7 @@ def split_largest_cluster(clusters: np.array,
         # Showing split result.
         print(f"- After splitting the largest cluster ({largest_cluster}), {len(np.unique(new_clusters))} clusters were created:")
         show_clusters(new_clusters)
-        split_dbcv = validity_index(new_clusters.astype(np.float64), cluster_embeddings)
+        split_dbcv = validity_index(cluster_embeddings.astype(np.float64), new_clusters)
         print(f"- DBCV for the splitted clusters: {split_dbcv}")
 
         # Fixing cluster ids. Keeping outlier id (-1).
