@@ -37,7 +37,7 @@ def split_largest_cluster(clusters: np.array,
     for _ in range(n_times):
 
         unique, counts = np.unique(clusters, return_counts=True)
-        n_clusters = len(unique)
+        n_clusters = len(unique) - 1
         largest_cluster = unique[np.argsort(counts)[::-1][0]]
 
         # If the largest cluster is the outlier cluster, stop the process.
@@ -50,15 +50,17 @@ def split_largest_cluster(clusters: np.array,
         cluster_embeddings = umap_embeddings[cluster_mask]
         new_clusters = clustering_model.fit_predict(cluster_embeddings)
 
+        # Fixing cluster ids. Keeping outlier id (-1).
+        new_clusters[new_clusters >= 0] += n_clusters
+        # Updating clusters with the new ids.
+        clusters[cluster_mask] = new_clusters
+
         # Showing split result.
-        print(f"- After splitting the largest cluster ({largest_cluster}), {len(np.unique(new_clusters))} clusters were created:")
+        print(f"- After splitting the largest cluster ({largest_cluster}), {len(np.unique(new_clusters))} clusters were created.")
         show_clusters(new_clusters)
+
         split_dbcv = validity_index(cluster_embeddings.astype(np.float64), new_clusters)
         print(f"- DBCV for the splitted clusters: {split_dbcv}")
-
-        # Fixing cluster ids. Keeping outlier id (-1).
-        new_clusters[new_clusters > 0] += n_clusters
-        clusters[cluster_mask] = new_clusters
 
     return clusters
 
