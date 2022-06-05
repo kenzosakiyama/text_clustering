@@ -34,16 +34,21 @@ def split_largest_cluster(clusters: np.array,
     
     clusters = clusters.copy()
 
-    for _ in range(n_times):
+    for i in range(n_times):
 
         unique, counts = np.unique(clusters, return_counts=True)
         n_clusters = len(unique) - 1
-        largest_cluster = unique[np.argsort(counts)[::-1][0]]
+        print(f"- Staring with {n_clusters} (excluding outliers).")
 
-        # If the largest cluster is the outlier cluster, stop the process.
+        # Find the two largest clusters
+        sorted_cluster_ids = np.argsort(counts)[::-1]
+        largest_cluster = unique[sorted_cluster_ids[0]]
+        second_largest_cluster = unique[sorted_cluster_ids[1]]
+
+        # If the largest cluster is the outlier cluster, use the second largest.
         if largest_cluster == -1:
-            print(f" Unable to split the largest cluster. It corresponds to the outlier cluster (-1).")
-            break
+            print(f" - Warning: the current largest cluster is the outlier cluster (-1). Using the second largest cluster ({second_largest_cluster}) instead.")
+            largest_cluster = second_largest_cluster
 
         # Filtering examples from the largest cluster
         cluster_mask = clusters == largest_cluster
@@ -51,7 +56,7 @@ def split_largest_cluster(clusters: np.array,
         new_clusters = clustering_model.fit_predict(cluster_embeddings)
 
         # Fixing cluster ids. Keeping outlier id (-1).
-        new_clusters[new_clusters >= 0] += n_clusters
+        new_clusters[new_clusters >= 0] += n_clusters + i # adding the current number divided clusters
         # Updating clusters with the new ids.
         clusters[cluster_mask] = new_clusters
 
