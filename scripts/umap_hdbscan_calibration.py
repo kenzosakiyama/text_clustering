@@ -91,7 +91,7 @@ def objective(trial: optuna.Trial,
 
     # Computando número de clusters 
     n_clusters = len(np.unique(cluster_labels))
-    trial.set_user_attr("n_clusters", n_clusters)
+    trial.set_user_attr("n_clusters", n_clusters - 1)
     print(f"- {n_clusters - 1} clusters obtained.")
 
     return score
