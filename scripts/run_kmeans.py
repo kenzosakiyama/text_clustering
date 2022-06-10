@@ -26,7 +26,7 @@ if __name__ == "__main__":
     print(f"- Loaded vectors of shape: {text_vectors.shape}, from {args.embeddings}.")
     print(f"- Saving clusters to: {args.output_file}.")
 
-    clustering_model = KMeans(random_state=1234, n_init=100, max_iter=500)
+    clustering_model = KMeans(random_state=1234, n_init=200, max_iter=500)
     print(f"- Running elbow rule.")
     model = KElbowVisualizer(clustering_model, k=K_RANGES, metric="distortion")
     model.fit(text_vectors)

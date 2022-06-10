@@ -77,6 +77,8 @@ if __name__ == "__main__":
     parser.add_argument("--embeddings", type=str, required=True, help="Arquivo .pkl com os embeddings a serem utilizados.")
     parser.add_argument("--output_file", type=str, default="clusters.pkl", help="Arquivo .pkl para armazenar os clusters. Associa-se um cluster para cada exemplo do arquivo de embeddings.")
     parser.add_argument("--divide_largest_cluster", type=int, default=0, help="Isola-se o maior cluster e repete-se a clusterização divide_largest_cluster vezes.")
+    
+    parser.add_argument("--no_umap", action="store_true", help="Desabilita a redução de dimensionalidade.")
 
     args = parser.parse_args()
 
@@ -89,9 +91,12 @@ if __name__ == "__main__":
 
     umap_params, hdbscan_params = load_parameters_from_json(args.params)
 
-    umap_reducer = UMAP(**umap_params)
-    print(f"- Running UMAP: {umap_reducer}.")
-    reduced_embeddings = umap_reducer.fit_transform(text_vectors)
+    if not args.no_umap:
+        umap_reducer = UMAP(**umap_params)
+        print(f"- Running UMAP: {umap_reducer}.")
+        reduced_embeddings = umap_reducer.fit_transform(text_vectors)
+    else:
+        reduced_embeddings = text_vectors
 
     hdbscan_clustering = HDBSCAN(**hdbscan_params)
     print(f"- Running HDBSCAN: {hdbscan_clustering}.")
