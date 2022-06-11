@@ -8,6 +8,7 @@ import pickle
 from functools import partial
 import pandas as pd
 from typing import Iterable, Tuple
+from optuna.samplers import RandomSampler, TPESampler
 
 SEED = 1234
 N_CORES = 6
@@ -106,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_jobs", type=int, default=1, help="Número cores a utilizar.")
     parser.add_argument("--iterations", type=int, default=100, help="Número de iterações para o Random Search.")
     parser.add_argument("--cluster_file", type=str, default="cluster.pkl", help="Arquivo .pkl contendo os cluster para os melhores parâmetros.")
+    parser.add_argument("--sampler", type=str, choices=["TPE", "random"], default="random", help="Forma de seleção de atributos para calibração.")
 
     args = parser.parse_args()
 
@@ -127,7 +129,13 @@ if __name__ == "__main__":
     objective_func = partial(objective, text_vectors=text_vectors)
 
     # Criando Study com o Optuna
-    study = optuna.create_study(direction='maximize')
+    print(f"\n- Using {args.sampler} sampler to select parameters.")
+    if args.sampler == "TPE":
+        sampler = TPESampler(seed=SEED)
+    else:
+        sampler = RandomSampler(seed=SEED)
+
+    study = optuna.create_study(direction='maximize', sampler=sampler)
     study.optimize(objective_func, n_trials=args.iterations, n_jobs=args.n_jobs)
 
     print(f"\nBest DBCV: {study.best_value}")
